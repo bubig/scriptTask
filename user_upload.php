@@ -10,10 +10,26 @@ if (isset($option["help"])) {
     -p – MySQL password \n
     -h – MySQL host\n
     --help – Display the list of options.";
+    exit;
 }
 if (isset($option["dry_run"])) {
     // run without insertion
     $noInsert = TRUE;
+}
+
+$fileName = "";
+if(isset($option["file"])){
+    $fileName = $option["file"];
+    if ( !file_exists($fileName) ) {
+        throw new Exception('File not found.');
+    }
+    $fileOpen = fopen($fileName, "r");
+    if ( !$fileOpen ) {
+        throw new Exception('Could not open file');
+    }else{
+        $fileContent = fgetcsv($fileOpen,1000, ',');
+        var_dump($fileContent);
+    }
 }
 
 
