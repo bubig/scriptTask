@@ -1,6 +1,10 @@
 <?php
+$host = "";
+$username = "";
+$password = "";
 $option = getopt("u::p::h::", ["help", "file:", "create_table", "dry_run"]);
 $noInsert = FALSE;
+$debugMode = TRUE;
 if (isset($option["help"])) {
     echo "
     --file [csv file name] – Name of the csv file to be parsed \n
@@ -16,6 +20,10 @@ if (isset($option["dry_run"])) {
     // run without insertion
     $noInsert = TRUE;
 }
+if (isset($option["u"]) && $option != "") $username = $option["u"];
+if (isset($option["p"]) && $option != "") $password = $option["p"];
+if (isset($option["h"]) && $option != "") $host = $option["h"];
+
 
 $fileName = "";
 if (isset($option["file"])) {
@@ -28,15 +36,16 @@ if (isset($option["file"])) {
         throw new Exception('Could not open file');
     } else {
         $rows = array_map('str_getcsv', file($fileName));
+        fclose($fileOpen);
         $tempHeader = array_shift($rows);
-        foreach($tempHeader as $text){
+        foreach ($tempHeader as $text) {
             $header[] = trim($text);
         }
-        if(!(array_search("name", $header) !== false
+        if (!(array_search("name", $header) !== false
             && array_search("surname", $header) !== false
-            && array_search("email", $header) !== false)){
+            && array_search("email", $header) !== false)) {
             echo "Problems with header";
-            exit;
+            if (!$debugMode) exit;
         }
         $csv = array();
         foreach ($rows as $row) {
@@ -51,13 +60,14 @@ if (isset($option["file"])) {
                 if (in_array($dataKey, ["name", "surname"])) {
                     $finalData[$k][$dataKey] = cleanDataName($dataValue);
                 } elseif ($dataKey == "email") {
-                    if(checkEmail($dataValue)){
-                        $finalData[$k][$dataKey] = $dataValue;
+                    if (checkEmail($dataValue)) {
+                        $finalData[$k][$dataKey] = strtolower($dataValue);
 
-                    }else{
+                    } else {
                         //stop all and return error msg
-                        fwrite(STDOUT, "wrong format email \"" . $dataValue . "\" line " . $k+2);
-                        exit;
+                        fwrite(STDOUT, "wrong format email \"" . $dataValue . "\" line " . $k + 2);
+                        if (!$debugMode) exit;
+                        if ($debugMode) $finalData[$k][$dataKey] = strtolower($dataValue);
                     }
                 }
             }
@@ -65,9 +75,9 @@ if (isset($option["file"])) {
         }
         //var_dump($header);
         //var_dump($csv);
-        //var_dump($finalData);
-        fclose($fileOpen);
+        var_dump($finalData);
 
+        manageInsert($username, $password, $host);
     }
 }
 
@@ -85,11 +95,31 @@ function checkEmail($email = "email")
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $emailErr = "Invalid email format";
         return false;
-        var_dump($emailErr);
-        var_dump($email);
     } else {
         return true;
     }
 }
+
+function manageInsert($username, $password, $host){
+    try {
+        $conn = new PDO("mysql:host=$host;dbname=catalyst_test", $username, $password);
+        // set the PDO error mode to exception
+        $conn->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        echo "Connected successfully";
+    } catch(PDOException $e) {
+        echo "Connection failed: " . $e->getMessage();
+    }
+exit;
+    // Create connection
+    $connection = new mysqli($host, $username, $password);
+
+// Check connection
+    if ($connection->connect_error) {
+        die("Connection failed: " . $connection->connect_error);
+    }
+    echo "Connected successfully";
+}
+
 
 ?>
