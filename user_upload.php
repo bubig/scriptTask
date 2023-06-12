@@ -28,7 +28,16 @@ if (isset($option["file"])) {
         throw new Exception('Could not open file');
     } else {
         $rows = array_map('str_getcsv', file($fileName));
-        $header = array_shift($rows);
+        $tempHeader = array_shift($rows);
+        foreach($tempHeader as $text){
+            $header[] = trim($text);
+        }
+        if(!(array_search("name", $header) !== false
+            && array_search("surname", $header) !== false
+            && array_search("email", $header) !== false)){
+            echo "Problems with header";
+            exit;
+        }
         $csv = array();
         foreach ($rows as $row) {
             $csv[] = array_combine($header, $row);
@@ -47,7 +56,8 @@ if (isset($option["file"])) {
 
                     }else{
                         //stop all and return error msg
-                        echo "wrong format email " . $dataValue;
+                        fwrite(STDOUT, "wrong format email \"" . $dataValue . "\" line " . $k+2);
+                        exit;
                     }
                 }
             }
