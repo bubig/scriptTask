@@ -2,7 +2,7 @@
 $host = "";
 $username = "";
 $password = "";
-$option = getopt("u::p::h::", ["help", "file:", "create_table", "dry_run"]);
+$option = getopt("u:p:h:", ["help", "file:", "create_table", "dry_run"]);
 $noInsert = FALSE;
 $debugMode = TRUE;
 if (isset($option["help"])) {
@@ -20,9 +20,9 @@ if (isset($option["dry_run"])) {
     // run without insertion
     $noInsert = TRUE;
 }
-if (isset($option["u"]) && $option != "") $username = $option["u"];
-if (isset($option["p"]) && $option != "") $password = $option["p"];
-if (isset($option["h"]) && $option != "") $host = $option["h"];
+if (isset($option["u"]) && $option["u"] != "") $username = $option["u"];
+if (isset($option["p"]) && $option["p"] != "") $password = $option["p"];
+if (isset($option["h"]) && $option["h"] != "") $host = $option["h"];
 
 
 $fileName = "";
@@ -75,7 +75,7 @@ if (isset($option["file"])) {
         }
         //var_dump($header);
         //var_dump($csv);
-        var_dump($finalData);
+        //var_dump($finalData);
 
         manageInsert($username, $password, $host);
     }
