@@ -27,10 +27,17 @@ if(isset($option["file"])){
     if ( !$fileOpen ) {
         throw new Exception('Could not open file');
     }else{
-        $fileContent = fgetcsv($fileOpen,1000, ',');
-        var_dump($fileContent);
+        $rows = array_map('str_getcsv', file($fileName));
+        $header = array_shift($rows);
+        $csv = array();
+        foreach ($rows as $row) {
+            $csv[] = array_combine($header, $row);
+        }
+        var_dump($header);
+        var_dump($csv);
+        var_dump("");
+        fclose($fileOpen);
     }
 }
-
 
 ?>
