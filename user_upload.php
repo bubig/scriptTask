@@ -3,7 +3,7 @@ include 'dbconfig.php';
 $host = $dbConfig["host"] ?? '';
 $username = $dbConfig["username"] ?? '';
 $password = $dbConfig["password"] ?? '';
-$db = $dbConfig["database"] ?? '';
+$db = $dbConfig["database"] ?? 'catalyst_test';
 $option = getopt("u:p:h:", ["help", "file:", "create_table", "dry_run"]);
 $GLOBALS["NOINSERT"] = FALSE;
 $debugMode = TRUE;
