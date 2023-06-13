@@ -7,3 +7,12 @@ CREATE TABLE IF NOT EXISTS users (
     email varchar(255) NOT NULL,
     UNIQUE KEY email_key (email)
     )
+
+SELECT EXISTS (
+               SELECT
+                   TABLE_NAME
+               FROM
+                   information_schema.TABLES
+               WHERE
+                       TABLE_NAME = 'users'
+           )

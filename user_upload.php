@@ -76,9 +76,9 @@ if (isset($option["file"])) {
         //var_dump($header);
         //var_dump($csv);
         //var_dump($finalData);
-        $connectOK = connectToDB($username, $password, $host);
-        if($connectOK){
-            manageInsert();
+        $pdo = connectToDB($username, $password, $host);
+        if($pdo !== false){
+            manageInsert($finalData, $pdo);
         }
     }
 }
@@ -107,14 +107,19 @@ function connectToDB($username, $password, $host){
         $conn = new PDO("mysql:host=$host;dbname=catalyst_test", $username, $password);
         // set the PDO error mode to exception
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        return true;
+        return $conn;
     } catch(PDOException $e) {
         echo "Connection failed: " . $e->getMessage();
         return false;
     }
 }
-function manageInsert(){
+function manageInsert($data, $pdo){
 
+    foreach($data as $value){
+        $sql = "INSERT INTO users (name, surname, email) VALUES (?,?,?)";
+        var_dump($sql);
+        $pdo->prepare($sql)->execute([$value["name"],$value["surname"],$value["email"]]);
+    }
 
 }
 
