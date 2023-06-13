@@ -1,6 +1,5 @@
 <?php
-$sbConfig["database"] = "";
-$sbConfig["host"] = "";
-$sbConfig["username"] = "";
-$sbConfig["password"] = "";
-$sbConfig["database"] = "";
+$dbConfig["database"] = "catalyst_test";
+$dbConfig["host"] = "";
+$dbConfig["username"] = "";
+$dbConfig["password"] = "";
