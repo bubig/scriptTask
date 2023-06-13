@@ -77,7 +77,7 @@ if (isset($option["file"])) {
         //var_dump($csv);
         //var_dump($finalData);
         $pdo = connectToDB($username, $password, $host);
-        if($pdo !== false){
+        if ($pdo !== false) {
             manageInsert($finalData, $pdo);
         }
     }
@@ -102,24 +102,38 @@ function checkEmail($email = "email")
     }
 }
 
-function connectToDB($username, $password, $host){
+function connectToDB($username, $password, $host)
+{
     try {
         $conn = new PDO("mysql:host=$host;dbname=catalyst_test", $username, $password);
         // set the PDO error mode to exception
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         return $conn;
-    } catch(PDOException $e) {
+    } catch (PDOException $e) {
         echo "Connection failed: " . $e->getMessage();
         return false;
     }
 }
-function manageInsert($data, $pdo){
 
-    foreach($data as $value){
-        $sql = "INSERT INTO users (name, surname, email) VALUES (?,?,?)";
-        var_dump($sql);
-        $pdo->prepare($sql)->execute([$value["name"],$value["surname"],$value["email"]]);
+function manageInsert($data, $pdo)
+{
+
+    try {
+        $pdo->beginTransaction();
+        foreach ($data as $value) {
+            $sql = "INSERT INTO users (name, surname, email) VALUES (?,?,?)";
+            $pdo->prepare($sql)->execute([$value["name"], $value["surname"], $value["email"]]);
+        }
+        $pdo->commit();
+    } catch (Exception $e) {
+        $pdo->rollback();
+        if ($e->errorInfo[1] == 1062) {
+            echo $e->errorInfo[2] . " insertion aborted";
+        } else {
+            throw $e;
+        }
     }
+
 
 }
 
