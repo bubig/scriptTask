@@ -17,6 +17,6 @@ for ($i = $start; $i <= $end; $i++) {
         echo $i;
     }
     if ($i != 100) {
-        echo ",";
+        echo ", ";
     }
 }
