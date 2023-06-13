@@ -3,7 +3,7 @@ $host = "";
 $username = "";
 $password = "";
 $option = getopt("u:p:h:", ["help", "file:", "create_table", "dry_run"]);
-$noInsert = FALSE;
+$GLOBALS["NOINSERT"] = FALSE;
 $debugMode = TRUE;
 if (isset($option["help"])) {
     echo "
@@ -18,7 +18,7 @@ if (isset($option["help"])) {
 }
 if (isset($option["dry_run"])) {
     // run without insertion
-    $noInsert = TRUE;
+    $GLOBALS["NOINSERT"] = TRUE;
 }
 if (isset($option["u"]) && $option["u"] != "") $username = $option["u"];
 if (isset($option["p"]) && $option["p"] != "") $password = $option["p"];
@@ -78,7 +78,8 @@ if (isset($option["file"])) {
         //var_dump($finalData);
         $pdo = connectToDB($username, $password, $host);
         if ($pdo !== false) {
-            manageInsert($finalData, $pdo);
+                $result = manageInsert($finalData, $pdo);
+
         }
     }
 }
@@ -121,21 +122,25 @@ function manageInsert($data, $pdo)
         $pdo->beginTransaction();
         $sql = "INSERT INTO users (name, surname, email) VALUES (?,?,?)";
         foreach ($data as $value) {
-            $pdo->prepare($sql)->execute([$value["name"], $value["surname"], $value["email"]]);
+            $sqlReady = $pdo->prepare($sql);
+            if(!$GLOBALS["NOINSERT"]) {
+                $sqlReady->execute([$value["name"], $value["surname"], $value["email"]]);
+            }
         }
         $pdo->commit();
     } catch (Exception $e) {
         $pdo->rollback();
         if ($e->errorInfo[1] == 1146) {
             echo "Table doesn't exist. Please refer to the documentation to create the table or use the option -create_table";
-            exit;
+            return false;
         }
         if ($e->errorInfo[1] == 1062) {
             echo $e->errorInfo[2] . " insertion aborted";
-            exit;
+            return false;
         } else {
             throw $e;
         }
     }
+    return true;
 }
 ?>
