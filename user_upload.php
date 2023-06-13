@@ -6,7 +6,6 @@ $password = $dbConfig["password"] ?? '';
 $db = $dbConfig["database"] ?? 'catalyst_test';
 $option = getopt("u:p:h:", ["help", "file:", "create_table", "dry_run"]);
 $GLOBALS["NOINSERT"] = FALSE;
-$debugMode = TRUE;
 $createTable = FALSE;
 
 // Handling options
@@ -24,6 +23,10 @@ if (isset($option["help"])) {
 if (isset($option["dry_run"])) {
     // run without insertion
     $GLOBALS["NOINSERT"] = TRUE;
+    if(!isset($option["file"])){
+        echo "A file option is require to use this option. Please, use the --help option for more information \n";
+        exit;
+    }
 }
 if (isset($option["u"]) && $option["u"] != "") $username = $option["u"];
 if (isset($option["p"]) && $option["p"] != "") $password = $option["p"];
@@ -33,8 +36,9 @@ if (isset($option["create_table"])) {
     // create table users
     $createTable = TRUE;
 }
-$pdo = connectToDB($db, $username, $password, $host);
+
 if ($createTable) {
+    $pdo = connectToDB($db, $username, $password, $host);
     if($pdo != FALSE) {
         // create table if connection succesfull
         createTable($pdo);
@@ -49,12 +53,16 @@ if (isset($option["file"])) {
     $fileName = $option["file"];
     if (!file_exists($fileName)) {
         // file not found
-        throw new Exception('File not found.');
+        //throw new Exception('File not found.');
+        echo "File not found \n";
+        exit;
     }
     $fileOpen = fopen($fileName, "r");
     if (!$fileOpen) {
         // couldn't open file
-        throw new Exception('Could not open file');
+        //throw new Exception('Could not open file');
+        echo "Couldn't open file \n";
+        exit;
     } else {
         // file opened
         $rows = array_map('str_getcsv', file($fileName));
@@ -74,6 +82,10 @@ if (isset($option["file"])) {
         $csv = array();
         foreach ($rows as $row) {
             $csv[] = array_combine($header, $row);
+        }
+        $pdo = connectToDB($db, $username, $password, $host);
+        if($pdo == false){
+            exit;
         }
         $finalData = array();
         foreach ($csv as $k => $arrayRow) {
@@ -104,6 +116,7 @@ if (isset($option["file"])) {
             $result = manageInsert($finalData, $pdo);
         }
     }
+    echo "End.\n";
 }
 
 
@@ -150,10 +163,20 @@ function connectToDB($db, $username, $password, $host)
         $conn = new PDO("mysql:host=$host;dbname=$db", $username, $password);
         // set the PDO error mode to exception
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        echo "Connection to the database successful.\n";
         return $conn;
     } catch (PDOException $e) {
+        if ($e->errorInfo[1] == 2002) {
+            echo "Host couldn't match.\n";
+            exit;
+        }
+        if ($e->errorInfo[1] == 1049) {
+            echo "Database doesn't exist.\n";
+            exit;
+        }
         if ($e->errorInfo[1] == 1045) {
             echo "No access for this user.\n";
+            exit;
         } else {
             echo "Connection failed: " . $e->getMessage() . "\n";
         }
@@ -180,6 +203,7 @@ function manageInsert($data, $pdo)
             }
         }
         $pdo->commit();
+        echo ($GLOBALS["NOINSERT"]?"Data successfully treated without insertion." : "Data successfully inserted.") . "\n";
     } catch (Exception $e) {
         $pdo->rollback();
         if ($e->errorInfo[1] == 1146) {
@@ -205,7 +229,7 @@ function manageInsert($data, $pdo)
 function createTable($pdo)
 {
     try {
-        $sql = "DROP TABLE users; 
+        $sql = "DROP TABLE IF EXISTS users; 
             CREATE TABLE IF NOT EXISTS users (
             ID INT AUTO_INCREMENT PRIMARY KEY,
             name varchar(50) NOT NULL,
@@ -215,9 +239,12 @@ function createTable($pdo)
             );";
         $sqlReady = $pdo->prepare($sql);
         $sqlReady->execute();
-        echo "Table succesfully created!\n";
+        echo "Table successfully created!\n";
     } catch (Exception $e) {
-        $pdo->rollback();
+        if ($e->errorInfo[1] == 1046) {
+            echo "Na database selected.\n";
+            exit;
+        }
         throw $e;
 
     }
