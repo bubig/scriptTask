@@ -117,25 +117,25 @@ function connectToDB($username, $password, $host)
 
 function manageInsert($data, $pdo)
 {
-
     try {
         $pdo->beginTransaction();
+        $sql = "INSERT INTO users (name, surname, email) VALUES (?,?,?)";
         foreach ($data as $value) {
-            $sql = "INSERT INTO users (name, surname, email) VALUES (?,?,?)";
             $pdo->prepare($sql)->execute([$value["name"], $value["surname"], $value["email"]]);
         }
         $pdo->commit();
     } catch (Exception $e) {
         $pdo->rollback();
+        if ($e->errorInfo[1] == 1146) {
+            echo "Table doesn't exist. Please refer to the documentation to create the table or use the option -create_table";
+            exit;
+        }
         if ($e->errorInfo[1] == 1062) {
             echo $e->errorInfo[2] . " insertion aborted";
+            exit;
         } else {
             throw $e;
         }
     }
-
-
 }
-
-
 ?>
