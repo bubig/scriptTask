@@ -65,7 +65,7 @@ if (isset($option["file"])) {
 
                     } else {
                         //stop all and return error msg
-                        fwrite(STDOUT, "wrong format email \"" . $dataValue . "\" line " . $k + 2);
+                        fwrite(STDOUT, "wrong format email \"" . $dataValue . "\" line " . $k + 2 . " \n");
                         if (!$debugMode) exit;
                         if ($debugMode) $finalData[$k][$dataKey] = strtolower($dataValue);
                     }
@@ -76,8 +76,10 @@ if (isset($option["file"])) {
         //var_dump($header);
         //var_dump($csv);
         //var_dump($finalData);
-
-        manageInsert($username, $password, $host);
+        $connectOK = connectToDB($username, $password, $host);
+        if($connectOK){
+            manageInsert();
+        }
     }
 }
 
@@ -100,25 +102,20 @@ function checkEmail($email = "email")
     }
 }
 
-function manageInsert($username, $password, $host){
+function connectToDB($username, $password, $host){
     try {
         $conn = new PDO("mysql:host=$host;dbname=catalyst_test", $username, $password);
         // set the PDO error mode to exception
-        $conn->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        echo "Connected successfully";
+        return true;
     } catch(PDOException $e) {
         echo "Connection failed: " . $e->getMessage();
+        return false;
     }
-exit;
-    // Create connection
-    $connection = new mysqli($host, $username, $password);
+}
+function manageInsert(){
 
-// Check connection
-    if ($connection->connect_error) {
-        die("Connection failed: " . $connection->connect_error);
-    }
-    echo "Connected successfully";
+
 }
 
 
