@@ -2,9 +2,13 @@
 $host = "";
 $username = "";
 $password = "";
+$db = "catalyst_test";
 $option = getopt("u:p:h:", ["help", "file:", "create_table", "dry_run"]);
 $GLOBALS["NOINSERT"] = FALSE;
 $debugMode = TRUE;
+$createTable = FALSE;
+
+// Handling options
 if (isset($option["help"])) {
     echo "
     --file [csv file name] – Name of the csv file to be parsed \n
@@ -24,27 +28,46 @@ if (isset($option["u"]) && $option["u"] != "") $username = $option["u"];
 if (isset($option["p"]) && $option["p"] != "") $password = $option["p"];
 if (isset($option["h"]) && $option["h"] != "") $host = $option["h"];
 
+if (isset($option["create_table"])) {
+    // create table users
+    $createTable = TRUE;
+}
+$pdo = connectToDB($db, $username, $password, $host);
+if ($createTable) {
+    if($pdo != FALSE) {
+        // create table if connection succesfull
+        createTable($pdo);
+        // no further action to be taken
+    }
+    exit;
+}
 
+// getting csv file
 $fileName = "";
 if (isset($option["file"])) {
     $fileName = $option["file"];
     if (!file_exists($fileName)) {
+        // file not found
         throw new Exception('File not found.');
     }
     $fileOpen = fopen($fileName, "r");
     if (!$fileOpen) {
+        // couldn't open file
         throw new Exception('Could not open file');
     } else {
+        // file opened
         $rows = array_map('str_getcsv', file($fileName));
         fclose($fileOpen);
         $tempHeader = array_shift($rows);
+        // clean header
         foreach ($tempHeader as $text) {
             $header[] = trim($text);
         }
+        // verify that the header correspond
         if (!(array_search("name", $header) !== false
             && array_search("surname", $header) !== false
             && array_search("email", $header) !== false)) {
-            echo "Problems with header";
+            echo "Problems with header\n";
             if (!$debugMode) exit;
         }
         $csv = array();
@@ -76,14 +99,18 @@ if (isset($option["file"])) {
         //var_dump($header);
         //var_dump($csv);
         //var_dump($finalData);
-        $pdo = connectToDB($username, $password, $host);
         if ($pdo !== false) {
-                $result = manageInsert($finalData, $pdo);
-
+            $result = manageInsert($finalData, $pdo);
         }
     }
 }
 
+
+/**
+ * get a string to clean
+ * @param $string
+ * @return string
+ */
 function cleanDataName($string = "test")
 {
     $string = trim($string);
@@ -93,29 +120,53 @@ function cleanDataName($string = "test")
     return $cleanData;
 }
 
+/**
+ * Verify if the email is in valid format
+ * @param $email
+ * @return bool
+ */
 function checkEmail($email = "email")
 {
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $emailErr = "Invalid email format";
+        $emailErr = "Invalid email format\n";
         return false;
     } else {
         return true;
     }
 }
 
-function connectToDB($username, $password, $host)
+/**
+ * Try the connection to the DB
+ * @param $db
+ * @param $username
+ * @param $password
+ * @param $host
+ * @return false|PDO
+ */
+function connectToDB($db, $username, $password, $host)
 {
     try {
-        $conn = new PDO("mysql:host=$host;dbname=catalyst_test", $username, $password);
+        $conn = new PDO("mysql:host=$host;dbname=$db", $username, $password);
         // set the PDO error mode to exception
         $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         return $conn;
     } catch (PDOException $e) {
-        echo "Connection failed: " . $e->getMessage();
+        if ($e->errorInfo[1] == 1045) {
+            echo "No access for this user.\n";
+        } else {
+            echo "Connection failed: " . $e->getMessage() . "\n";
+        }
         return false;
     }
 }
 
+/**
+ * Insert the data to the table users
+ * @param $data
+ * @param $pdo
+ * @return bool
+ * @throws Exception
+ */
 function manageInsert($data, $pdo)
 {
     try {
@@ -123,7 +174,7 @@ function manageInsert($data, $pdo)
         $sql = "INSERT INTO users (name, surname, email) VALUES (?,?,?)";
         foreach ($data as $value) {
             $sqlReady = $pdo->prepare($sql);
-            if(!$GLOBALS["NOINSERT"]) {
+            if (!$GLOBALS["NOINSERT"]) {
                 $sqlReady->execute([$value["name"], $value["surname"], $value["email"]]);
             }
         }
@@ -131,11 +182,11 @@ function manageInsert($data, $pdo)
     } catch (Exception $e) {
         $pdo->rollback();
         if ($e->errorInfo[1] == 1146) {
-            echo "Table doesn't exist. Please refer to the documentation to create the table or use the option -create_table";
+            echo "Table doesn't exist.\nPlease refer to the documentation to create the table or use the option -create_table\n";
             return false;
         }
         if ($e->errorInfo[1] == 1062) {
-            echo $e->errorInfo[2] . " insertion aborted";
+            echo $e->errorInfo[2] . " insertion aborted\n";
             return false;
         } else {
             throw $e;
@@ -143,4 +194,33 @@ function manageInsert($data, $pdo)
     }
     return true;
 }
+
+/**
+ * Create the table users
+ * @param $pdo
+ * @return bool
+ * @throws Exception
+ */
+function createTable($pdo)
+{
+    try {
+        $sql = "DROP TABLE users; 
+            CREATE TABLE IF NOT EXISTS users (
+            ID INT AUTO_INCREMENT PRIMARY KEY,
+            name varchar(50) NOT NULL,
+            surname varchar(50) NOT NULL,
+            email varchar(255) NOT NULL,
+            UNIQUE KEY email_key (email)
+            );";
+        $sqlReady = $pdo->prepare($sql);
+        $sqlReady->execute();
+        echo "Table succesfully created!\n";
+    } catch (Exception $e) {
+        $pdo->rollback();
+        throw $e;
+
+    }
+    return true;
+}
+
 ?>
